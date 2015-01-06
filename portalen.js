@@ -1,4 +1,3 @@
-"use strict";
 // Portalen av Martin Green (martin@famgreen.se), 1997.
 // portad från Java applet till javascript, 2015
 // Portalens övre vänstra fundament: 144;51 , Nedre: 149;119
@@ -541,9 +540,9 @@ function KeyUp(e)
 }
 function onTouchStart(e)
 {
-	for(var i = 0; i < touchList.length; i++)
+	for(var i = 0; i < e.touches.length; i++)
 	{
-		Gui.click(touchList[i].screenX, touchList[i].screenY);
+		Gui.click(e.touches[i].screenX, e.touches[i].screenY);
 	}
 }
 function drawDebug(ctx, t)
@@ -590,7 +589,6 @@ function init()
 	else
 	{
 		canvas.addEventListener('click', onClick, false);
-		// document.body.onmousedown = pushed;
 	}
 	document.body.oncontextmenu = function() { return false; } // disable the popup menu
 	
