@@ -120,7 +120,7 @@ function Button(text, x, y, wx, wy, onclick)
 	{
 		if (this.hit(x, y))
 		{
-			this.clickedCounter = 16;
+			this.clickedAnimationCounter = 16;
 			this.onclick();
 		}
 	};
