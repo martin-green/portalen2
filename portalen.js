@@ -108,6 +108,8 @@ function Button(text, x, y, wx, wy, onclick)
 		ctx.fillRect(this.x, this.y, this.wx, this.wy);
 		ctx.fillStyle = "#000";
 		ctx.font = "16px Arial";
+		var oldTextAlign = ctx.textAlign;
+		var oldTextBaseline = ctx.textBaseline;
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.fillText(this.text, this.x+(this.wx/2)+(isClicked ? 1 : 0), this.y+(this.wy/2)+(isClicked ? 1 : 0));
@@ -115,6 +117,8 @@ function Button(text, x, y, wx, wy, onclick)
 		ctx.strokeStyle = "#000";
 		ctx.strokeRect(this.x, this.y, this.wx, this.wy);
 		ctx.stroke();
+		ctx.textAlign = oldTextAlign;
+		ctx.textBaseline = oldTextBaseline;
 	};
 	this.hit = function(x, y) { return (x >= this.x && x <= this.x+this.wx && y >= this.y && y <= this.y+this.wy); };
 	this.tryClick = function(x, y)
@@ -557,10 +561,10 @@ function drawDebug(ctx, t)
 	ctx.fillRect(280, 200, 200, 200);
 	ctx.fillStyle = "#000";
 	ctx.font = "12px Arial";
-	ctx.fillText("sopbil:" + sopbil.getDebugString(), 280, 220);
-	ctx.fillText("sugbil:" + sugbil.getDebugString(), 280, 235);
-	ctx.fillText("portal:" + portal.vinkel.toFixed(1), 280, 250);
-	ctx.fillText("speed=" + speed.toFixed(3), 280, 265);
+	ctx.fillText("sopbil:" + sopbil.getDebugString(), 285, 220);
+	ctx.fillText("sugbil:" + sugbil.getDebugString(), 285, 235);
+	ctx.fillText("portal:" + portal.vinkel.toFixed(1), 285, 250);
+	ctx.fillText("speed=" + speed.toFixed(3), 285, 265);
 }
 function getPosition(element) 
 {
