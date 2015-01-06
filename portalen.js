@@ -1,8 +1,8 @@
-// Portalen av Martin Green (martin@famgreen.se), 1997.
-// portad frÂn Java applet till javascript, 2015
-// Portalens ˆvre v‰nstra fundament: 144;51 , Nedre: 149;119
-// Portalens ˆvre hˆgra   fundament: 171;51 , Nedre: 171;119
-// V‰gens ˆverkant: ;76 , nederkant: ;111
+Ôªø// Portalen av Martin Green (martin@famgreen.se), 1997.
+// portad fr√•n Java applet till javascript, 2015
+// Portalens √∂vre v√§nstra fundament: 144;51 , Nedre: 149;119
+// Portalens √∂vre h√∂gra   fundament: 171;51 , Nedre: 171;119
+// V√§gens √∂verkant: ;76 , nederkant: ;111
 var nRoadBottom_y = 113;
 var nRoadTop_y = 90;
 var nPortalLoc_x = 155;
@@ -107,8 +107,10 @@ function Button(text, x, y, wx, wy, onclick)
 		ctx.fillStyle = myGradient;
 		ctx.fillRect(this.x, this.y, this.wx, this.wy);
 		ctx.fillStyle = "#000";
-		ctx.font = "14px Arial";
-		ctx.fillText(this.text, this.x+(this.wx/5)+(isClicked ? 1 : 0), this.y+(this.wy/1.4)+(isClicked ? 1 : 0));
+		ctx.font = "16px Arial";
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText(this.text, this.x+(this.wx/2)+(isClicked ? 1 : 0), this.y+(this.wy/2)+(isClicked ? 1 : 0));
 		ctx.beginPath();
 		ctx.strokeStyle = "#000";
 		ctx.strokeRect(this.x, this.y, this.wx, this.wy);
@@ -129,12 +131,8 @@ function reset()
 {
 	score = 0;
 	lives = 3;
-	sopbil.x = 0;
-	sugbil.x = 0;
-	sopbil.stop();
-	sugbil.stop();
-	sopbil.movingRight = true;
-	sugbil.movingRight = true;
+	sopbil.reset();
+	sugbil.reset();
 	gameOverLine = 0;
 	speed = 0.25;
 	portal.vinkel = 0;
@@ -263,7 +261,7 @@ function drawGameOver(ctx)
 	context.font = "40px Arial";
 	context.fillStyle = "#000";
 	context.fillText("Game Over", canvas.width/4, nRoadTop_y);
-	context.fillText("Po‰ng:" + score, canvas.width/4, nRoadTop_y+45);
+	context.fillText("Po√§ng:" + score, canvas.width/4, nRoadTop_y+45);
 }
 function drawLives(ctx)
 {
@@ -293,7 +291,7 @@ function Bil(x,imgurl1,imgurl2,allowedToPassPortal)
 	this.x = x;
 	this.y = nRoadBottom_y-30;
 	this.movingRight = true;
-	this.stopCounter = generateRandomInt(200);
+	this.stopCounter = 0;
 	this.crashedAnimationCounter = 0;
 	this.havePayload = false;
 	this.loadcount = 0;
@@ -308,6 +306,14 @@ function Bil(x,imgurl1,imgurl2,allowedToPassPortal)
 	};
 	this.img[0].src = imgurl1;
 	this.img[1].src = imgurl2;
+	this.reset = function()
+	{
+		this.x = 0;
+		this.stop();
+		this.movingRight = true;
+		this.crashedAnimationCounter = 0;
+		this.havePayload = false;
+	}
 	this.drawFirst = function(ctx, t) 
 	{
 		if (!this.shouldPass && this.x > nGrassLoc_x && this.movingRight)
@@ -580,8 +586,8 @@ function init()
 {
 	canvas = document.getElementById('canvas');
 	context = canvas.getContext('2d');
-	new Button("÷ppna", 200, 220, 70, 22, function() {isPressingUp=true;});
-	new Button("St‰ng", 200, 250, 70, 22, function() {isPressingDown=true;});
+	new Button("√ñppna", 200, 210, 80, 35, function() {isPressingUp=true;});
+	new Button("St√§ng", 200, 250, 80, 35, function() {isPressingDown=true;});
 	if ('ontouchstart' in document.documentElement)
 	{
 		canvas.addEventListener('touchstart', onTouchStart, false); 
