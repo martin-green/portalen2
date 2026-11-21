@@ -1,0 +1,20 @@
+{
+  "name": "portalen2",
+  "version": "2.0.0",
+  "description": "Portalen – webbspel om portalen på scoutgården Härsjösand",
+  "private": true,
+  "scripts": {
+    "start": "node server.mjs",
+    "vendor": "node -e \"const fs=require('fs');fs.mkdirSync('vendor/three',{recursive:true});for(const f of ['three.module.js','three.core.js'])fs.copyFileSync('node_modules/three/build/'+f,'vendor/three/'+f);fs.copyFileSync('node_modules/three/LICENSE','vendor/three/LICENSE')\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/martin-green/portalen2.git"
+  },
+  "author": "Martin Green",
+  "type": "commonjs",
+  "homepage": "https://martin-green.github.io/portalen2/",
+  "devDependencies": {
+    "three": "^0.187.0"
+  }
+}

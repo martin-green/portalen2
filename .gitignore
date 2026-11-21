@@ -16,6 +16,9 @@ local.properties
 .settings/
 .loadpath
 
+# reference files
+references/
+
 # External tool builders
 .externalToolBuilders/
 
@@ -161,3 +164,7 @@ pip-log.txt
 
 # Mac crap
 .DS_Store
+
+# Node
+node_modules/
+

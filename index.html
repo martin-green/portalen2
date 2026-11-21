@@ -1,14 +1,114 @@
 ﻿<!doctype html>
-<html>
+<html lang="sv">
 <head>
-<title>Portalen JS</title>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!-- prevent zoom when double tapping on a mobile device -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"></meta>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Portalen – Härsjösand</title>
+<meta name="description" content="Öppna portalen för sugbilen, håll den stängd för sopbilen och sköt lägergården Härsjösand.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M2 14 16 4l14 10z' fill='%23b4532f'/%3E%3Crect x='4' y='14' width='7' height='16' fill='%239a2a1e'/%3E%3Crect x='21' y='14' width='7' height='16' fill='%239a2a1e'/%3E%3Crect x='10' y='9' width='12' height='3' fill='%23e8892b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./css/style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js" } }</script>
 </head>
 <body>
-<canvas id="canvas" width="450" height="300"></canvas>
+<canvas id="view"></canvas>
+<div id="labels"></div>
+<div id="flood"></div>
+<div id="flash"></div>
+
+<div id="hud" class="hidden">
+	<div id="topbar">
+		<div class="brand">PORTALEN<small>Härsjösand</small></div>
+		<div id="clock"><span id="day">Dag 1</span><span id="time">07:00</span></div>
+		<div id="lives" title="Liv"></div>
+		<div id="scorebox"><small>Poäng</small><span id="score">0</span></div>
+		<div id="morale" title="Stämning bland scouterna"><small>Stämning</small><div class="bar"><i></i></div></div>
+		<div class="buttons">
+			<button id="btnHelp" title="Hjälp (H)">?</button>
+			<button id="btnMute" title="Ljud (M)"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8c2 2 2 6 0 8M18.5 5.5c3.5 3.5 3.5 9.5 0 13"/><path class="slash" d="M3 3l18 18"/></svg></button>
+			<button id="btnPause" title="Paus (P)"><svg viewBox="0 0 24 24"><path d="M7 5v14M17 5v14"/></svg></button>
+		</div>
+	</div>
+	<div id="tasks"></div>
+	<div id="crew"></div>
+	<button id="btnPortal" class="big">Öppna portalen</button>
+	<div id="toasts"></div>
+</div>
+
+<div id="screen-start" class="screen">
+	<div class="panel">
+		<h1>PORTALEN</h1>
+		<p class="sub">Scoutgården Härsjösand</p>
+		<p>Öppna portalen när <b>sugbilen</b> kommer, annars svämmar trekammarbrunnen över. Håll den stängd när <b>sopbilen</b> kommer, annars kör den in och gör märken på gräsmattan.</p>
+		<p>Samtidigt ska flaggan hissas, dasset tömmas, gräset klippas, veden huggas och bastun eldas till kvällsdoppet. Du har tre liv. Sedan svämmar allt över med bajs.</p>
+		<div class="row">
+			<button id="btnStart" class="big">Starta</button>
+			<button id="btnHelp2">Så spelar du</button>
+		</div>
+		<h3>Topplista</h3>
+		<ol id="hsStart" class="hs"></ol>
+		<p class="foot">Originalet av Martin Green, 1997</p>
+	</div>
+	<div id="loading">Laddar…</div>
+</div>
+
+<div id="screen-pause" class="screen hidden">
+	<div class="panel small">
+		<h2>Paus</h2>
+		<button id="btnResume" class="big">Fortsätt</button>
+	</div>
+</div>
+
+<div id="screen-help" class="screen hidden">
+	<div class="panel">
+		<h2>Så spelar du</h2>
+		<div class="cols">
+			<div>
+				<h3>Sysslor</h3>
+				<ul>
+					<li><b>Portalen</b> – öppna för sugbilen, stäng för sopbilen. Sugbilen vill ut igen när den pumpat klart.</li>
+					<li><b>Trekammarbrunnen</b> – fylls på hela dagen. Ring sugbilen innan den svämmar över.</li>
+					<li><b>Utedasset</b> – en funktionär bär tunnan till brunnen.</li>
+					<li><b>Flaggan</b> – hissas kl 08:00, halas senast 21:00.</li>
+					<li><b>Vedboden</b> – någon måste hugga ved.</li>
+					<li><b>Bastun</b> – kör ved med skottkärra och elda så att bastun är minst 65° till kvällsdoppet kl 21.</li>
+					<li><b>Gräsmattan</b> – den röda åkgräsklipparen startar bara ibland. Klicka på den för att dra i startsnöret. I för långt gräs fastnar skottkärran.</li>
+				</ul>
+			</div>
+			<div>
+				<h3>Kontroller</h3>
+				<ul>
+					<li><b>Klicka</b> på portalen, flaggstången, dasset, vedboden, bastun, brunnen eller klipparen.</li>
+					<li><b>Mellanslag</b> eller <b>↑/↓</b> – portalen</li>
+					<li><b>1–6</b> – flagga, dass, ved, bastu, klipp, ring sugbil</li>
+					<li><b>Dra</b> – flytta kartan · <b>högerdrag</b> – rotera/luta</li>
+					<li><b>Hjul</b> – zooma · <b>WASD</b>, <b>Q/E</b>, <b>R/F</b></li>
+					<li><b>C</b> – visa portalen · <b>P</b> – paus · <b>M</b> – ljud</li>
+					<li>Klicka på gräsmattan medan klipparen går för att styra den dit.</li>
+				</ul>
+			</div>
+		</div>
+		<button id="btnHelpClose" class="big">Stäng</button>
+	</div>
+</div>
+
+<div id="screen-over" class="screen hidden">
+	<div class="panel">
+		<h1 class="over">Det svämmade över!</h1>
+		<p class="big-score"><span id="overScore">0</span> poäng · dag <span id="overDay">1</span></p>
+		<p id="overStats" class="sub"></p>
+		<div id="hsEntry" class="row">
+			<input id="hsName" maxlength="14" placeholder="Ditt namn" autocomplete="nickname">
+			<button id="btnSave">Spara</button>
+		</div>
+		<ol id="hsOver" class="hs"></ol>
+		<div class="row">
+			<button id="btnAgain" class="big">Spela igen</button>
+			<button id="btnMenu">Meny</button>
+		</div>
+	</div>
+</div>
+
+<noscript>Spelet kräver JavaScript.</noscript>
+<script type="module" src="./js/main.js"></script>
 </body>
-<script src="requestanimationframeshim.js"></script>
-<script src="portalen.js"></script>
 </html>
