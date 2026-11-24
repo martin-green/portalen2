@@ -147,7 +147,7 @@
 		for (const r of [W.roadOuter, W.roadInner]) strokePath(g, r, 5.0, '#000');
 		for (const p of W.footpaths) strokePath(g, p, 1.6, '#000');
 		g.fillStyle = '#000';
-		for (const b of W.buildings) g.fillRect(b.cx - b.w / 2 - 0.2, b.cz - b.d / 2 - 0.2, b.w + 0.4, b.d + 0.4);
+		for (const b of W.buildings) for (const r of b.rects) g.fillRect(r.x0 - 0.2, r.z0 - 0.2, r.x1 - r.x0 + 0.4, r.z1 - r.z0 + 0.4);
 		g.fillRect(W.dass.x - W.dass.w / 2, W.dass.z - W.dass.d / 2, W.dass.w, W.dass.d);
 		g.fillRect(W.vedbod.x - W.vedbod.w / 2, W.vedbod.z - W.vedbod.d / 2, W.vedbod.w, W.vedbod.d);
 		g.beginPath(); g.arc(W.flag.x, W.flag.z, 1.3, 0, Math.PI * 2); g.fill();

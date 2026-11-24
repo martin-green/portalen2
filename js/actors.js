@@ -237,7 +237,7 @@ class Scout extends Person {
 				this.moving = false;
 				this.act = this.blue ? 'shiver' : this.act;
 				if (this.blue && Math.random() < dt * 2) P.add('cold', this.x, this.z, this.H, { up: 0.5, size: 0.12 });
-				if (hour >= 20.7 && hour < 21.6 && !this.bathed) { this.act = null; this.state = 'toBastu'; this.goTo(W.bastu.x - 3.8, W.bastu.z + PG.rand(-1.8, 1.8)); break; }
+				if (hour >= 20.7 && hour < 21.6 && !this.bathed) { this.act = null; this.state = 'toBastu'; this.goTo(W.bastu.x + W.bastu.w / 2 + 2.6, W.bastu.z + PG.rand(-2.2, 2.2)); break; }
 				if (hour >= 22.2 || hour < 6) { this.act = null; this.state = 'toBed'; this.goTo(door.x, door.z); break; }
 				if (this.timer <= 0) {
 					this.act = null;
@@ -280,7 +280,7 @@ class Scout extends Person {
 				this.hidden = true;
 				if (this.timer <= 0) {
 					this.hidden = false;
-					this.x = W.bastu.x + 2.8; this.z = W.bastu.z + 0.5;
+					this.x = W.bastu.x + W.bastu.w / 2 + 0.8; this.z = W.bastu.z + 0.3;
 					this.state = 'toJetty';
 					this.path = new PG.Path([[this.x, this.z], [W.jetty.x0, W.jetty.z + PG.rand(-0.5, 0.5)], [W.jetty.x1 - 0.5, W.jetty.z + PG.rand(-0.6, 0.6)]]);
 					this.s = 0;
@@ -312,7 +312,7 @@ class Scout extends Person {
 					if (hour > 21.9) { this.state = 'toBed'; this.h0 = 0; this.goTo(door.x, door.z); }
 					else {
 						this.state = 'toBastu2';
-						this.path = new PG.Path([[this.x, this.z], [W.jetty.x0, W.jetty.z], [W.bastu.x + 2.8, W.bastu.z + 0.5]]);
+						this.path = new PG.Path([[this.x, this.z], [W.jetty.x0, W.jetty.z], [W.bastu.x + W.bastu.w / 2 + 0.8, W.bastu.z + 0.3]]);
 						this.s = 0;
 					}
 				}
@@ -637,7 +637,7 @@ class Vehicle {
 		this.lane = 0.4;
 		A.honkTune();
 		G.morale = Math.max(0, G.morale - 10);
-		G.loseLife('Sopbilen körde in på gräsmattan – hey gang!');
+		G.loseLife('Sopbilen körde in på gräsmattan – Gängen!');
 	}
 	makeHose() {
 		const hx = Math.cos(this.heading), hz = Math.sin(this.heading);

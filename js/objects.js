@@ -24,7 +24,8 @@ Portal.reset = function () { Portal.frac = 0; Portal.target = 0; Portal.blocked 
 // ---------- Buildings ----------
 const WHITE = '#ebe6da', GLASS = '#26323d', PLINTH = '#55524c', WOOD = '#8a7f6e';
 
-// Wall details; o: door (true | u | false), doorW, doorH, doorC, windows [{u, w}], noWindows, recess [u0, u1], plinthC, plinthH.
+// Wall details; o: door (true | u | false), doorW, doorH, doorC, doors [{u, w, h}] (wide double doors such as garage doors),
+// windows [{u, w}], winTop (distance from the eave to the window tops), noWindows, recess [u0, u1], plinthC, plinthH.
 function decorateWall(f, wallW, hw, o) {
 	const ph = o.plinthH || 0.4;
 	M.decal(f, 0, hw - ph, wallW, hw, o.plinthC || PLINTH);
@@ -32,14 +33,21 @@ function decorateWall(f, wallW, hw, o) {
 	M.decal(f, 0, 0, 0.24, hw, WHITE);
 	M.decal(f, wallW - 0.24, 0, wallW, hw, WHITE);
 	let doorU = -99;
+	const door = (u, w, h, c) => {
+		const dw = w / 2;
+		M.decal(f, u - dw - 0.13, hw - h - 0.1, u + dw + 0.13, hw - 0.02, WHITE);
+		M.decal(f, u - dw, hw - h, u + dw, hw - 0.02, c);
+		if (dw > 1) {
+			M.decal(f, u - 0.04, hw - h, u + 0.04, hw - 0.02, WHITE);
+			// Diagonal-free board doors: a white rail across each leaf.
+			M.decal(f, u - dw, hw - h * 0.55, u + dw, hw - h * 0.55 + 0.08, WHITE);
+		} else M.decal(f, u + dw - 0.25, hw - h / 2 - 0.05, u + dw - 0.15, hw - h / 2 + 0.05, '#c9b46a');
+	};
 	if (o.door !== undefined && o.door !== false) {
 		doorU = o.door === true ? wallW / 2 : o.door;
-		const dw = (o.doorW || 1.1) / 2, dh = o.doorH || 2.1;
-		M.decal(f, doorU - dw - 0.13, hw - dh - 0.1, doorU + dw + 0.13, hw - 0.02, WHITE);
-		M.decal(f, doorU - dw, hw - dh, doorU + dw, hw - 0.02, o.doorC || '#5b3a26');
-		if (dw > 1) M.decal(f, doorU - 0.04, hw - dh, doorU + 0.04, hw - 0.02, WHITE);
-		else M.decal(f, doorU + dw - 0.25, hw - dh / 2 - 0.05, doorU + dw - 0.15, hw - dh / 2 + 0.05, '#c9b46a');
+		door(doorU, o.doorW || 1.1, o.doorH || 2.1, o.doorC || '#5b3a26');
 	}
+	for (const d of o.doors || []) door(d.u, d.w, d.h, o.doorC || '#5b3a26');
 	if (o.noWindows) return;
 	let wins = o.windows;
 	if (!wins) {
@@ -50,7 +58,7 @@ function decorateWall(f, wallW, hw, o) {
 			if (Math.abs(u - doorU) >= 1.4) wins.push({ u });
 		}
 	}
-	const top = Math.min(0.9, hw * 0.25), bot = top + 1.15;
+	const top = o.winTop !== undefined ? o.winTop : Math.min(0.9, hw * 0.25), bot = top + 1.15;
 	for (const w of wins) {
 		const half = (w.w || 1.0) / 2, u = w.u;
 		M.decal(f, u - half - 0.12, top - 0.1, u + half + 0.12, bot + 0.1, WHITE);
@@ -91,15 +99,12 @@ function tilePaint(hex) {
 // Building-specific details from photos, in building-local coordinates.
 const EXTRAS = {
 	ladan(f, b) {
-		// Glazed porch with its own gable, centered on the south wall.
+		// Open porch with its own gable, centered on the south wall: white posts on a low red parapet, no glass.
 		f.push(...M.gable(-3.15, 5.3, 3.15, 7.7, 2.95, 4.2, 'z', b.roof, WHITE, 0.25));
 		for (const x of [-3.0, -0.6, 0.6, 3.0]) f.push(...M.box(x - 0.08, 7.45, 0, x + 0.08, 7.61, 2.95, WHITE));
 		for (const s of [-1, 1]) {
 			const a = s < 0 ? -2.95 : 0.68, c = s < 0 ? -0.68 : 2.95;
 			f.push(...M.box(a, 7.42, 0, c, 7.6, 0.95, b.wall), ...M.box(a - 0.05, 7.38, 0.95, c + 0.05, 7.64, 1.04, WHITE));
-			const pane = M.box(a, 7.48, 1.05, c, 7.53, 2.6, '#3a4652');
-			M.decal(pane.find((p) => p.side === 's'), 0.02, 0.02, c - a - 0.02, 1.53, GLASS, 'window');
-			f.push(...pane);
 		}
 		f.push(...M.box(-3.15, 5.5, 0, 3.15, 7.7, 0.08, '#9a958a'), ...M.box(-7.0, 5.5, 0, -3.15, 9.5, 0.04, '#8d8a82'));
 		f.push(...M.box(8.9, 5.5, 2.15, 9.7, 5.8, 2.7, '#f2f2ee'));
@@ -130,10 +135,28 @@ const EXTRAS = {
 		f.push(...M.box(2.2, 3.95, 0.5, 2.38, 4.13, 3.0, WHITE));
 	},
 	storstugan(f) {
-		wallWindow(f, 2.3, 7.5, 5.5, 's', 0.9, 0.9);
-		f.push(...M.box(-4.75, 6.0, 0, -0.15, 7.6, 0.4, WOOD), ...M.box(-1.3, 7.6, 0, -0.15, 8.0, 0.25, WOOD));
-		f.push(...M.box(-4.75, 7.52, 1.25, -1.3, 7.6, 1.33, WOOD));
-		for (const x of [-4.7, -3.5, -2.3, -1.35]) f.push(...M.box(x - 0.04, 7.52, 0.4, x + 0.04, 7.6, 1.33, WOOD));
+		// Upper-floor windows in the gables (main house west and east, cross gable to the north).
+		wallWindow(f, -7.2, 0, 5.6, 'w', 0.9, 1.0);
+		wallWindow(f, 7.2, 0, 5.6, 'e', 0.9, 1.0);
+		wallWindow(f, -4.0, -6.0, 5.7, 'n', 0.9, 1.0);
+		// Deck with railing east of the cross gable, in front of the entrance, and a ramp down to the east.
+		const DECK = '#9a8a70', H = 0.45, x0 = -1.4, x1 = 2.2, z0 = -7.3, z1 = -3.8;
+		f.push(...M.box(x0, z0, 0, x1, z1, H, DECK, { top: '#a8977a' }));
+		const rail = (ax, az, bx, bz) => {
+			const len = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(len / 1.2));
+			for (let i = 0; i <= n; i++) {
+				const x = ax + ((bx - ax) * i) / n, z = az + ((bz - az) * i) / n;
+				f.push(...M.box(x - 0.05, z - 0.05, H, x + 0.05, z + 0.05, H + 0.95, WOOD));
+			}
+			f.push(...M.box(Math.min(ax, bx) - 0.05, Math.min(az, bz) - 0.05, H + 0.9, Math.max(ax, bx) + 0.05, Math.max(az, bz) + 0.05, H + 1.0, WOOD));
+			f.push(...M.box(Math.min(ax, bx) - 0.03, Math.min(az, bz) - 0.03, H + 0.45, Math.max(ax, bx) + 0.03, Math.max(az, bz) + 0.03, H + 0.52, WOOD));
+		};
+		rail(x0 + 0.05, z0 + 0.05, x1 - 0.05, z0 + 0.05);
+		rail(x1 - 0.05, -6.0, x1 - 0.05, z1);
+		f.push(...slab(x1, H, x1 + 3.6, 0.02, 0.08, z0 + 0.1, -6.1, DECK, WOOD));
+		// Stone paving by the north-west corner, towards the road.
+		f.push(...M.box(-10.5, -8.9, 0, -7.3, -5.0, 0.06, '#8f8c84'));
+		f.push(...M.box(-7.3, -6.4, 0, -6.6, -5.0, 0.06, '#8f8c84'));
 	},
 };
 
@@ -149,12 +172,22 @@ function houseFaces(b) {
 			if (o.door === undefined && i === 0 && f.side === 's') o.door = true;
 			decorateWall(f, width, p.hw, o);
 		}
-		faces.push(...walls, ...M.gable(x0, z0, x1, z1, p.hw, p.hr, p.ridge, b.roof, b.wall, 0.55));
+		faces.push(...walls);
+		if (p.shed) {
+			// Lean-to against a taller wall in the north: high edge at z0, falling to the south.
+			const W0 = PG.hex2rgb(b.wall), oh = 0.35, k = (p.hr - p.hw) / p.d;
+			faces.push({ p: [[x1, z0, p.hr], [x1, z0, p.hw], [x1, z1, p.hw]], c: W0, n: [1, 0, 0] });
+			faces.push({ p: [[x0, z1, p.hw], [x0, z0, p.hw], [x0, z0, p.hr]], c: W0, n: [-1, 0, 0] });
+			faces.push(...M.shedRoof(x0, z0, x1, z1, p.hw - k * oh, p.hr + k * oh, b.roof, oh));
+		} else faces.push(...M.gable(x0, z0, x1, z1, p.hw, p.hr, p.ridge, b.roof, b.wall, 0.55));
 	});
 	const chimneys = b.chimneys || (b.chimney ? [[b.ridge === 'x' ? -b.w * 0.2 : 0, b.ridge === 'x' ? 0 : -b.d * 0.2, '#7d3a2c']] : []);
-	for (const [cx, cz, c, s] of chimneys) {
+	// [x, z, color, size, extra height]; the chimney starts just under the roof surface where it stands.
+	for (const [cx, cz, c, s, extra] of chimneys) {
 		const r = s || 0.4;
-		faces.push(...M.box(cx - r, cz - r, b.hr - 0.6, cx + r, cz + r, b.hr + 1.0, c, { top: '#2b2b2b' }));
+		const off = b.ridge === 'x' ? Math.abs(cz) / (b.d / 2) : Math.abs(cx) / (b.w / 2);
+		const roofH = b.hr - (b.hr - b.hw) * Math.min(1, off);
+		faces.push(...M.box(cx - r, cz - r, roofH - 0.6, cx + r, cz + r, roofH + 1.0 + (extra || 0), c, { top: '#2b2b2b' }));
 	}
 	if (EXTRAS[b.id]) EXTRAS[b.id](faces, b);
 	if (b.tiles) {
@@ -198,11 +231,51 @@ function makeCanoes() {
 function makeBuildings() {
 	for (const b of W.buildings) {
 		const g = Gfx.makeObject(houseFaces(b));
-		Gfx.place(g, b.cx, b.cz, 0);
+		Gfx.place(g, b.cx, b.cz, 0, b.rot || 0);
 		Gfx.add(g);
-		Gfx.addPick('building', b.cx, b.cz, 0, b.w, b.hr, b.d, b);
+		if (b.rot) {
+			const pk = Gfx.addPick('house', b.cx, b.cz, 0, b.w + 0.6, b.hr, b.d + 0.6, b);
+			pk.rotation.y = -b.rot;
+		} else {
+			const r = b.bounds;
+			Gfx.addPick('house', (r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, 0, r.x1 - r.x0 + 0.6, b.hr, r.z1 - r.z0 + 0.6, b);
+		}
 		if (b.id === 'kanot') makeCanoes();
 	}
+}
+
+// ---------- Stenmurar ----------
+function makeStoneWalls() {
+	const rnd = PG.mulberry32(4242);
+	const stones = [];
+	for (const line of W.stoneWalls) {
+		const path = new PG.Path(line);
+		for (let s = 0; s < path.length; s += 0.55) {
+			const q = path.at(s);
+			const nx = -Math.sin(q.heading), nz = Math.cos(q.heading);
+			// Bottom layer of big stones, smaller ones on top.
+			const off = (rnd() - 0.5) * 0.5;
+			stones.push({ x: q.x + nx * off, z: q.z + nz * off, h: 0.2, r: 0.42 + rnd() * 0.25, sy: 0.6 + rnd() * 0.25 });
+			if (rnd() < 0.75) {
+				const o2 = (rnd() - 0.5) * 0.4;
+				stones.push({ x: q.x + nx * o2 + (rnd() - 0.5) * 0.3, z: q.z + nz * o2, h: 0.62, r: 0.28 + rnd() * 0.18, sy: 0.65 + rnd() * 0.2 });
+			}
+		}
+	}
+	const geo = new THREE.IcosahedronGeometry(1, 0);
+	const mat = new THREE.MeshLambertMaterial({ flatShading: true });
+	const im = new THREE.InstancedMesh(geo, mat, stones.length);
+	const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3(), c = new THREE.Color();
+	stones.forEach((st, i) => {
+		q.setFromEuler(e.set(rnd() * 0.6, rnd() * 6.28, rnd() * 0.6));
+		m4.compose(p.set(st.x, st.h, st.z), q, s.set(st.r * (1 + rnd() * 0.3), st.r * st.sy, st.r));
+		im.setMatrixAt(i, m4);
+		const v = 0.42 + rnd() * 0.25, moss = rnd() < 0.3 ? 0.06 : 0;
+		im.setColorAt(i, c.setRGB(v * 0.95, v + moss, v * 0.9 - moss, THREE.SRGBColorSpace));
+	});
+	im.castShadow = true;
+	im.receiveShadow = true;
+	Gfx.add(im);
 }
 
 // ---------- Portal (as in hsandvinter.jpg): red plank pillars, gable roof hinged on top of the east pillar ----------
@@ -230,6 +303,11 @@ function slab(xa, ha, xb, hb, t, z0, z1, topC, edgeC) {
 		{ p: [P3(a1, z0), P3(a1, z1), P3(a0, z1), P3(a0, z0)], c: E, n: [-dx, 0, -dh] },
 		{ p: [P3(b1, z1), P3(b1, z0), P3(b0, z0), P3(b0, z1)], c: E, n: [dx, 0, dh] },
 	];
+}
+
+// Mirror a face across the x = z diagonal (lets slab() build boards that run north-south).
+function swapXZ(f) {
+	return { p: f.p.map((p) => [p[1], p[0], p[2]]), c: f.c, n: [f.n[1], f.n[0], f.n[2]] };
 }
 
 function makePortal() {
@@ -303,17 +381,6 @@ function makePortal() {
 		root.add(g);
 	}
 	Gfx.addPick('portal', P.x, P.z, 0, (G + PW) * 2 + 1.5, 4.6, 3);
-	// Fences (gärdsgård)
-	const ff = [];
-	for (const fc of W.fences) {
-		const [a, b] = fc;
-		for (let x = a[0]; x < b[0] - 0.1; x += 2.2) {
-			const x1 = Math.min(b[0], x + 2.2);
-			ff.push(...M.box(x - 0.08, a[1] - 0.08, 0, x + 0.08, a[1] + 0.08, 1.35, '#6b5038', { top: '#8a6a4a' }));
-			ff.push(...M.box(x, a[1] - 0.05, 0.55, x1, a[1] + 0.05, 0.68, '#7d5e40'), ...M.box(x, a[1] - 0.05, 1.05, x1, a[1] + 0.05, 1.18, '#7d5e40'));
-		}
-	}
-	Gfx.add(Gfx.makeObject(ff));
 	updaters.push(() => {
 		pivot.rotation.z = -PG.smooth(Portal.frac) * ROOF_OPEN;
 		const j = Portal.shake > 0 ? Math.sin(performance.now() * 0.08) * Portal.shake * 0.12 : 0;
@@ -436,7 +503,7 @@ function makeDass() {
 	const g = Gfx.makeObject(body.concat(roof));
 	Gfx.place(g, D.x, D.z, 0);
 	Gfx.add(g);
-	Gfx.addPick('dass', D.x, D.z, 0, D.w + 2, 3.5, D.d + 1);
+	Gfx.addPick('house', D.x, D.z, 0, D.w + 2, 3.5, D.d + 1, W.structure('dass'));
 }
 
 // ---------- Vedboden ----------
@@ -479,7 +546,7 @@ function makeVedbod() {
 	Gfx.place(axe, C.x + 0.1, C.z, 0);
 	axe.rotation.z = 0.4;
 	Gfx.add(axe);
-	Gfx.addPick('vedbod', V.x + 1, V.z, 0, V.w + 4, 3, V.d + 1);
+	Gfx.addPick('house', V.x, V.z, 0, V.w + 1, 3, V.d + 1, W.structure('vedbod'));
 	Gfx.addPick('vedbod', C.x, C.z, 0, 2.5, 2, 2.5);
 	updaters.push(() => {
 		const st = PG.state;
@@ -500,33 +567,62 @@ function makeVedbod() {
 // ---------- Bastun och bryggan ----------
 function makeBastu() {
 	const B = W.bastu;
-	const hw = B.w / 2, hd = B.d / 2;
-	const logs = (ctx, w, h, shade) => {
-		ctx.strokeStyle = shade([60, 38, 22]);
-		ctx.lineWidth = 3;
-		for (let y = 22; y < h; y += 22) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+	const hw = B.w / 2, hd = B.d / 2, HW = 2.5, HR = 3.9;
+	// Red panel walls with white corner boards and a light grey standing-seam metal roof (satellite images 3 and 4).
+	const panel = (ctx, w, h, shade) => {
+		ctx.strokeStyle = shade([96, 26, 18]);
+		ctx.lineWidth = 2;
+		for (let x = 14; x < w; x += 14) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
 	};
-	const body = M.box(-hw, -hd, 0, hw, hd, 2.4, '#6a4426', { noTop: true });
+	const body = M.box(-hw, -hd, 0, hw, hd, HW, '#8e2b1f', { noTop: true });
 	for (const f of body) {
-		f.paint = logs;
-		if (f.side === 'e') M.decal(f, 1.2, 0.5, 2.2, 2.4, '#3b2414');
+		const width = f.side === 's' || f.side === 'n' ? B.w : B.d;
+		f.paint = panel;
+		M.decal(f, 0, HW - 0.35, width, HW, '#5d5a55');
+		M.decal(f, 0, 0, 0.2, HW, WHITE);
+		M.decal(f, width - 0.2, 0, width, HW, WHITE);
+		if (f.side === 'e') {
+			// Door towards the lake.
+			M.decal(f, hd - 0.58, HW - 2.0, hd + 0.58, HW - 0.02, WHITE);
+			M.decal(f, hd - 0.45, HW - 1.9, hd + 0.45, HW - 0.02, '#6b4426');
+			M.decal(f, hd + 0.22, HW - 1.0, hd + 0.3, HW - 0.92, '#c9b46a');
+		}
 		if (f.side === 's') {
-			M.decal(f, 3.2, 0.7, 4.0, 1.3, '#e8e2d2');
-			M.decal(f, 3.28, 0.78, 3.92, 1.22, '#2a1a10', 'emit');
+			// Small window in the sauna room; it glows when the stove burns.
+			M.decal(f, 3.5, 0.55, 4.55, 1.25, WHITE);
+			M.decal(f, 3.6, 0.65, 4.45, 1.15, '#2a1a10', 'emit');
+		}
+		if (f.side === 'n') {
+			M.decal(f, 1.6, 0.55, 2.5, 1.25, WHITE);
+			M.decal(f, 1.7, 0.65, 2.4, 1.15, GLASS, 'window');
 		}
 	}
-	const faces = body.concat(M.gable(-hw, -hd, hw, hd, 2.4, 3.6, 'x', '#3a3a3c', '#6a4426', 0.45), M.box(-1.6, -0.3, 2.6, -1.0, 0.3, 4.3, '#777770', { top: '#222' }));
-	const g = Gfx.makeObject(faces);
+	const roof = M.gable(-hw, -hd, hw, hd, HW, HR, 'x', '#a3a8aa', '#8e2b1f', 0.4);
+	const seams = (ctx, w, h, shade) => {
+		ctx.fillStyle = shade([120, 124, 126]);
+		for (let x = 0; x < w; x += 24) ctx.fillRect(x, 0, 3, h);
+	};
+	for (const f of roof) if (f.roof) f.paint = seams;
+	// White barge boards on the gables.
+	for (const s of [-1, 1]) {
+		const x = s * (hw + 0.42);
+		roof.push(...slab(-hd - 0.4, HW - 0.3, 0, HR - 0.06, 0.16, x - 0.04, x + 0.04, WHITE, WHITE).map(swapXZ));
+		roof.push(...slab(0, HR - 0.06, hd + 0.4, HW - 0.3, 0.16, x - 0.04, x + 0.04, WHITE, WHITE).map(swapXZ));
+	}
+	// Stove pipe with a rain cap, and a stone step at the door.
+	const pipe = [].concat(M.cylinder(-1.2, 0, HR - 0.6, HR + 1.1, 0.13, 8, '#4a4a4a'), M.cylinder(-1.2, 0, HR + 1.15, HR + 1.22, 0.26, 8, '#3a3a3a'));
+	const step = M.box(hw, -0.7, 0, hw + 0.55, 0.7, 0.2, '#8f8c84');
+	const g = Gfx.makeObject(body.concat(roof, pipe, step));
 	Gfx.place(g, B.x, B.z, 0);
 	Gfx.add(g);
 	const pile = Gfx.makeObject(M.box(-hw - 1.3, -1.2, 0, -hw - 0.3, 1.2, 0.9, '#8b6a45', { top: '#7a5a3a' }));
 	Gfx.place(pile, B.x, B.z, 0);
 	Gfx.add(pile);
-	const light = Gfx.addPointLight(B.x + 1.1, B.z + hd + 1.0, 1.2, 0xff8a3a, 14);
+	const light = Gfx.addPointLight(B.x + 1.2, B.z + hd + 1.0, 1.2, 0xff8a3a, 14);
 	const glow = Gfx.makeGlow(0xff8a3a, 4);
-	glow.position.set(B.x + 1.1, 1.0, B.z + hd + 0.2);
+	glow.position.set(B.x + 1.2, 1.4, B.z + hd + 0.2);
 	Gfx.add(glow);
-	Gfx.addPick('bastu', B.x, B.z, 0, B.w + 3, 4.5, B.d + 2);
+	Gfx.addPick('house', B.x, B.z, 0, B.w + 1.5, 4.5, B.d + 1.5, W.structure('bastu'));
 	const J = W.jetty;
 	const jf = [].concat(M.box(J.x0, J.z - 1, 0.35, J.x1, J.z + 1, 0.5, '#9a7a55', { top: '#a8875f' }));
 	for (let x = J.x0 + 2; x <= J.x1; x += 3) {
@@ -598,6 +694,7 @@ function makeLamps() {
 
 Objects.init = function () {
 	makeBuildings();
+	makeStoneWalls();
 	makePortal();
 	makeFlag();
 	makeBrunn();

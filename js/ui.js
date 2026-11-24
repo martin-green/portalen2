@@ -53,6 +53,7 @@ UI.init = function () {
 	$('btnMenu').addEventListener('click', () => { show('screen-over', false); show('screen-start', true); $('hud').classList.add('hidden'); PG.Game.init(); });
 	$('hsName').value = localStorage.getItem('portalen2.name') || '';
 	$('btnPortal').addEventListener('click', () => { A.init(); PG.Game.order('portal'); });
+	$('houseClose').addEventListener('click', () => UI.hideHouse());
 	updateMuteBtn();
 	renderHighscores($('hsStart'));
 	initInput();
@@ -256,7 +257,170 @@ function pinchInfo() {
 function handleClick(x, y) {
 	const hit = Gfx.pick(x, y);
 	const ground = Gfx.groundAt(x, y);
+	if (house.open) {
+		if (hit && hit.id === 'house') UI.showHouse(hit.ref);
+		return;
+	}
 	PG.Game.click(hit, ground);
+}
+
+// ---------- House detail view ----------
+const house = { open: null, cam: null, pausedByUs: false, t: 0 };
+const fmtM = (v) => (Math.round(v * 10) / 10).toString().replace('.', ',');
+
+// Footprint parts in house-local meters: [{x0, z0, x1, z1, ridge}]
+function houseParts(ref) {
+	if (ref.parts) return ref.parts.map((p) => ({ x0: p.dx - p.w / 2, x1: p.dx + p.w / 2, z0: p.dz - p.d / 2, z1: p.dz + p.d / 2, ridge: p.shed ? null : p.ridge }));
+	const w = ref.size ? ref.size[0] : ref.w, d = ref.size ? ref.size[1] : ref.d;
+	return [{ x0: -w / 2, x1: w / 2, z0: -d / 2, z1: d / 2, ridge: ref.ridge || null }];
+}
+function footprint(parts) {
+	const b = { x0: Math.min(...parts.map((p) => p.x0)), x1: Math.max(...parts.map((p) => p.x1)), z0: Math.min(...parts.map((p) => p.z0)), z1: Math.max(...parts.map((p) => p.z1)) };
+	// Union area by sampling (parts may overlap).
+	let n = 0;
+	const s = 0.1;
+	for (let x = b.x0 + s / 2; x < b.x1; x += s) for (let z = b.z0 + s / 2; z < b.z1; z += s) if (parts.some((p) => x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1)) n++;
+	return { ...b, area: n * s * s };
+}
+function drawPlan(svg, parts, fp, rot) {
+	const W0 = 120, H0 = 90, pad = 12;
+	const span = Math.max(fp.x1 - fp.x0, fp.z1 - fp.z0) * (rot ? 1.15 : 1);
+	const k = Math.min((W0 - 2 * pad) / span, (H0 - 2 * pad) / span);
+	const cx = (fp.x0 + fp.x1) / 2, cz = (fp.z0 + fp.z1) / 2;
+	let g = `<g transform="translate(${W0 / 2} ${H0 / 2}) rotate(${((rot || 0) * 180) / Math.PI}) scale(${k}) translate(${-cx} ${-cz})">`;
+	for (const p of parts) g += `<rect class="wall" x="${p.x0}" y="${p.z0}" width="${p.x1 - p.x0}" height="${p.z1 - p.z0}" vector-effect="non-scaling-stroke"/>`;
+	for (const p of parts) {
+		if (p.ridge === 'x') g += `<line class="ridge" x1="${p.x0}" y1="${(p.z0 + p.z1) / 2}" x2="${p.x1}" y2="${(p.z0 + p.z1) / 2}" vector-effect="non-scaling-stroke"/>`;
+		if (p.ridge === 'z') g += `<line class="ridge" x1="${(p.x0 + p.x1) / 2}" y1="${p.z0}" x2="${(p.x0 + p.x1) / 2}" y2="${p.z1}" vector-effect="non-scaling-stroke"/>`;
+	}
+	g += '</g>';
+	g += `<path class="north" d="M110 16V5M106 9l4-4 4 4"/><text x="107.5" y="24">N</text>`;
+	g += `<text x="4" y="86">${fmtM(fp.x1 - fp.x0)} × ${fmtM(fp.z1 - fp.z0)} m</text>`;
+	svg.innerHTML = g;
+}
+
+function houseLive(ref) {
+	const S = PG.state;
+	const rows = [];
+	const acts = [];
+	if (W.sleepHouses.includes(ref.id)) {
+		const mine = S.scouts.filter((s) => s.house === ref);
+		const inside = mine.filter((s) => s.state === 'inside').length;
+		rows.push(['Scouter som bor här', `${mine.length}`], ['Inne just nu', `${inside}`]);
+	}
+	const busy = (kind) => S.workers.find((w) => w.task && w.task.kind === kind);
+	if (ref.task === 'bastu') {
+		const bw = busy('bastu');
+		rows.push(['Temperatur', `${Math.round(S.bastuTemp)}°` + (S.bastuFuel > 0 ? ' · eldas' : '')], ['Kvällsdopp', 'kl 21:00, minst 65°']);
+		if (bw) rows.push(['Ved', `${bw.name} kör ved hit`]);
+		acts.push(['Elda bastun', 'bastu']);
+	} else if (ref.task === 'vedbod') {
+		const cw = busy('chop');
+		rows.push(['Ved i boden', `${Math.floor(S.ved)} av 30`]);
+		if (cw) rows.push(['Huggs nu av', cw.name]);
+		acts.push([cw ? 'Sluta hugga' : 'Hugg ved', 'chop']);
+	} else if (ref.task === 'dass') {
+		const dw = busy('dass');
+		rows.push(['Tunnan', `${Math.round(Math.min(100, S.dass))} % full`]);
+		if (dw) rows.push(['Töms nu av', dw.name]);
+		acts.push(['Töm dasset', 'dass']);
+	} else if (ref.id === 'ladan') {
+		rows.push(['Trekammarbrunnen', `${Math.round(S.brunn)} % full`]);
+	}
+	return { rows, acts };
+}
+
+function renderHouse() {
+	const ref = house.open;
+	const parts = houseParts(ref);
+	const fp = footprint(parts);
+	$('houseType').textContent = ref.type || 'Byggnad';
+	$('houseName').textContent = ref.name;
+	$('houseInfo').textContent = ref.info || '';
+	drawPlan($('housePlan'), parts, fp, ref.rot);
+	const live = houseLive(ref);
+	const rows = [['Yttermått', `${fmtM(fp.x1 - fp.x0)} × ${fmtM(fp.z1 - fp.z0)} m`], ['Byggnadsyta', `ca ${Math.round(fp.area)} m²`], ['Nockhöjd', `ca ${fmtM(ref.hr || ref.height)} m`]].concat(live.rows);
+	const dl = $('houseFacts');
+	dl.innerHTML = '';
+	for (const [k, v] of rows) {
+		const dt = document.createElement('dt'), dd = document.createElement('dd');
+		dt.textContent = k;
+		dd.textContent = v;
+		dl.append(dt, dd);
+	}
+	const box = $('houseActions');
+	const key = live.acts.map((a) => a[0]).join('|');
+	if (box.dataset.key !== key) {
+		box.dataset.key = key;
+		box.innerHTML = '';
+		for (const [label, order] of live.acts) {
+			const b = document.createElement('button');
+			b.textContent = label;
+			b.addEventListener('click', () => { A.init(); UI.hideHouse(); PG.Game.order(order); });
+			box.appendChild(b);
+		}
+	}
+}
+
+UI.showHouse = function (ref) {
+	const S = PG.state;
+	if (!house.open) {
+		const g = Gfx.cam.goal;
+		house.cam = { tx: g.tx, tz: g.tz, dist: g.dist, yaw: g.yaw, pitch: g.pitch };
+		house.pausedByUs = false;
+		if (S.state === 'play') { PG.Game.togglePause(); house.pausedByUs = true; }
+	}
+	house.open = ref;
+	house.t = 0;
+	$('house').classList.remove('hidden');
+	document.body.classList.add('house-open');
+	$('houseActions').dataset.key = '';
+	renderHouse();
+	// Fly to the house and look at it from a little lower angle; UI.update keeps the camera slowly circling.
+	const parts = houseParts(ref);
+	const fp = footprint(parts);
+	const size = Math.max(fp.x1 - fp.x0, fp.z1 - fp.z0, ref.hr || ref.height || 3);
+	const cam = Gfx.cam;
+	// High enough to look over the spruces (up to ~18 m) around the houses at the forest edge.
+	cam.goal.pitch = 0.72;
+	cam.focus(ref.cx, ref.cz, PG.clamp(size * 2.4 + 18, 30, 80));
+	// Keep the house clear of the panel on wide screens by aiming a bit to its left (as seen on screen).
+	if (window.innerWidth > 760) {
+		const sh = size * 0.45;
+		cam.goal.tx -= Math.cos(cam.goal.yaw) * sh;
+		cam.goal.tz += Math.sin(cam.goal.yaw) * sh;
+	} else {
+		// Phone: the panel covers the lower half, so aim past the house towards the camera to lift it up on screen.
+		const sh = size * 0.5 + 8;
+		cam.goal.tx += Math.sin(cam.goal.yaw) * sh;
+		cam.goal.tz += Math.cos(cam.goal.yaw) * sh;
+	}
+};
+
+UI.hideHouse = function () {
+	if (!house.open) return;
+	house.open = null;
+	$('house').classList.add('hidden');
+	document.body.classList.remove('house-open');
+	if (house.cam) Object.assign(Gfx.cam.goal, house.cam);
+	Gfx.cam.clamp();
+	if (house.pausedByUs && PG.state.state === 'paused' && $('screen-pause').classList.contains('hidden')) PG.Game.togglePause();
+	house.pausedByUs = false;
+};
+
+function updateHouse(dt) {
+	if (!house.open) return;
+	if (PG.state.state === 'menu' || PG.state.state === 'over') { UI.hideHouse(); return; }
+	const cam = Gfx.cam;
+	const r = dt * 0.12;
+	cam.goal.yaw += r;
+	// Rotate the aim offset with the camera so the house stays put on screen.
+	const ox = cam.goal.tx - house.open.cx, oz = cam.goal.tz - house.open.cz;
+	const c = Math.cos(r), s = Math.sin(r);
+	cam.goal.tx = house.open.cx + ox * c + oz * s;
+	cam.goal.tz = house.open.cz - ox * s + oz * c;
+	house.t -= dt;
+	if (house.t <= 0) { house.t = 0.25; renderHouse(); }
 }
 function onKey(e) {
 	if (e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') saveScore(); return; }
@@ -287,7 +451,8 @@ function onKey(e) {
 		case '-': cam.goal.dist *= 1.18; break;
 		case 'c': focusOn('portal'); break;
 		case 'p': case 'escape':
-			if (!$('screen-help').classList.contains('hidden')) showHelp(false);
+			if (k === 'escape' && house.open) UI.hideHouse();
+			else if (!$('screen-help').classList.contains('hidden')) showHelp(false);
 			else if (S.state === 'play' || S.state === 'paused') togglePause();
 			break;
 		case 'm': toggleMute(); break;
@@ -464,6 +629,7 @@ function updateMarkers() {
 UI.update = function (dt) {
 	const S = PG.state;
 	if (S.state === 'menu') Gfx.cam.goal.yaw += dt * 0.03;
+	updateHouse(dt);
 	hudT -= dt;
 	if (hudT <= 0 && S.state !== 'menu') { hudT = 0.1; updateHud(); }
 	updateMarkers();

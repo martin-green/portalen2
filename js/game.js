@@ -286,7 +286,7 @@ Game.order = function (kind) {
 					{ go: fetch },
 					{ work: 1.5, act: 'pull', face: [V.x, V.z], done: (w) => { load = Math.min(6, Math.floor(S.ved)); S.ved -= load; w.carry = 'karra'; } },
 					{
-						go: [B.x - 3.4, B.z + 0.4], cart: true,
+						go: [B.x - B.w / 2 - 1.9, B.z + 0.4], cart: true,
 						onStuck: () => {
 							Game.toast('Skottkärran fastnade i det långa gräset! Klipp gräsmattan först.', 'bad', 'mower');
 							A.bell(true);
@@ -357,13 +357,11 @@ Game.click = function (hit, ground) {
 			case 'portal': return Game.order('portal');
 			case 'flag': return Game.order('flag');
 			case 'brunn': return Game.order('call');
-			case 'dass': return Game.order('dass');
 			case 'vedbod': return Game.order('chop');
-			case 'bastu': return Game.order('bastu');
 			case 'mower': return Game.order('mow');
 			case 'worker': return Game.toast(`${hit.ref.name}: ${hit.ref.status}`);
 			case 'vehicle': return Game.toast(`${hit.ref.label}: ${vehicleStatus(hit.ref)}`);
-			case 'building': return Game.toast(hit.ref.name);
+			case 'house': return PG.UI.showHouse(hit.ref);
 		}
 	}
 	if (ground && PG.Mower.driver && PG.Mower.running() && PG.Ground.isLawnCell(ground.x, ground.z)) {
@@ -413,11 +411,13 @@ function overflow() {
 	}
 }
 
+// Only one vehicle on the road at a time, and a pause after it has left the map,
+// so there is always time to close the portal after the sugbil before the next sopbil arrives.
+const VEHICLE_GAP = 6; // real seconds
 function spawn(kind) {
 	const S = PG.state;
-	const sp = W.roadOuter[0];
-	if (kind === 'sug' && S.vehicles.some((v) => v.kind === 'sug' && !v.dead)) return false;
-	if (S.vehicles.some((v) => !v.dead && Math.hypot(v.x - sp[0], v.z - sp[1]) < 16)) return false;
+	if (S.vehicles.length) return false;
+	if (S.playTime < (S.nextVehicleAt || 0)) return false;
 	S.vehicles.push(new PG.Vehicle(kind));
 	return true;
 }
@@ -463,8 +463,8 @@ Game.update = function (dt) {
 	if (S.bastuFuel > 0) {
 		S.bastuFuel = Math.max(0, S.bastuFuel - dh);
 		S.bastuTemp = Math.min(95, S.bastuTemp + dh * 110);
-		if (Math.random() < dt * 5) P.add('smoke', B.x - 1.3, B.z, 4.4, { up: 1.2, spread: 0.4, size: 0.45 });
-		if (PG.Light.day < 0.5 && Math.random() < dt * 3) P.add('ember', B.x - 1.3, B.z, 4.4, { up: 2.5, spread: 0.8, size: 0.06 });
+		if (Math.random() < dt * 5) P.add('smoke', B.x - 1.2, B.z, 5.2, { up: 1.2, spread: 0.4, size: 0.45 });
+		if (PG.Light.day < 0.5 && Math.random() < dt * 3) P.add('ember', B.x - 1.2, B.z, 5.2, { up: 2.5, spread: 0.8, size: 0.06 });
 		if (Gfx.visible(B.x, B.z, 0) && Math.random() < dt * 5) A.crackle(0.4);
 	} else S.bastuTemp = Math.max(16, S.bastuTemp - dh * 22);
 	if (S.flagFrac !== S.flagTarget) {
@@ -517,11 +517,12 @@ Game.update = function (dt) {
 
 	// Vehicles
 	if (!S.night) {
-		for (const e of S.schedule) {
-			if (e.done || S.time < e.t) continue;
-			if (spawn(e.kind)) e.done = true;
-			else e.t += 0.1;
-		}
+		// Vehicles come one at a time, in schedule order, so the day's list slides. A visit that is
+		// more than 1.5 hours late is skipped so the list doesn't pile up into the evening.
+		const due = S.schedule.filter((e) => !e.done && S.time >= e.t);
+		for (const e of due) if (S.time - e.t > 1.5) e.done = true;
+		const next = due.find((e) => !e.done);
+		if (next && spawn(next.kind)) next.done = true;
 		if (S.called && S.time >= S.called.t) {
 			if (spawn('sug')) S.called = null;
 			else S.called.t += 0.1;
@@ -537,6 +538,7 @@ Game.update = function (dt) {
 			if (v.kind === 'sop' && v.served) S.stats.sop++;
 			v.dispose();
 			S.vehicles.splice(i, 1);
+			S.nextVehicleAt = S.playTime + VEHICLE_GAP;
 		}
 	}
 

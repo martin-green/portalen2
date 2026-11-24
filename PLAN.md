@@ -23,13 +23,16 @@ Skala: 10 px i satellitbilden = 1 m. Världskoordinater i meter: x = österut, z
 | Portalen (vit oval) | 1545, 1319 | 154.5, 132 | markerad |
 | Trekammarbrunnen (röd cirkel) | 1355, 525 | 135.5, 52.5 | markerad |
 | Flaggstången (blå cirkel) | 1680, 690 | 168, 69 | markerad |
-| Bastun (orange cirkel) | 2145, 1160 | 213, 116 | markerad |
+| Bastun (orange cirkel) | 2145, 1160 | 207, 116 (grått plåttak, nock öst–väst, satellitbild 3 och 4) | markerad |
 | Ved (vedboden, blå oval, långt vitt tak) | 1250–1300, 150–285 | 127, 21.5 | markerad + karta |
 | Verktygsboden | 1263–1374, 330–433 | 132, 38 | karta |
 | Ladan (sugbilen parkerar väster om den) | 1280–1490, 530–660 | 139, 59 | karta |
 | Lillstugan | 1650–1790, 385–490 | 172, 48.5 | karta |
-| Storstugan | 1567–1667, 867–1072 | 160, 95 | karta |
-| Garaget | 1378–1472, 1200–1305 | 142.5, 125 | karta |
+| Storstugan | – | 165.2, 100 (huvudkropp öst–väst, tvärgavel i nordväst, tillbyggnad i söder) | satellitbild 4 |
+| Garaget | 1378–1472, 1200–1305 | 142.8, 125.2 (nock nord–syd, vridet ca 10°, portar mot öster) | karta + satellitbild 1 och 4 |
+| Stenmurar (norr om garaget) | 1024–1460, 1092–1180 | väster om vägen 102–146, 110–119; öster om vägen 151.6–159.5, 108.7 | satellitbild 1 |
+| Byggnaden med gult tak söder om garaget | – | tillfällig container, finns inte med i spelet | svar |
+| Boktjärn | – | väster om kartan, östra stranden x ≈ −5 | hsandkarta.png (0,3 m/px, Ladan som fixpunkt) |
 | Kanotförrådet | 2145–2260, 540–700 | 220, 62 | svar |
 | Soptunnorna (sydost om portalen) | – | 160, 136.5 | svar |
 | Utedasset (rosa cirkel i satellitbild2) | 1436–1512, 353–429 | 149.7, 37.75 (dassbyggnaden, dörrar mot väster) | markerad |
@@ -60,6 +63,14 @@ Skala: 10 px i satellitbilden = 1 m. Världskoordinater i meter: x = österut, z
 | Bastun | Kör ved med skottkärra och elda från cirka 18:00 så att bastun är varm (≥ 65 °C) till kvällsdoppet 21:00. Resan från vedboden tar en bra stund. | Scouterna blir blåa av kylan. Stor stämningsförlust. |
 | Gräsmattan | Gräset växer. Den röda åkgräsklipparen startar bara ibland: klicka för att dra i startsnöret. Den kan också tjuvstanna. | För långt gräs gör att skottkärran fastnar, så det blir ingen ved till bastun. Det sänker också stämningen. |
 
+### Fordonstrafik
+- Bara ett fordon i taget på vägen. Nästa kommer tidigast 6 s efter att det förra lämnat kartan, så att man hinner stänga portalen efter sugbilen.
+- Dagens schema körs i tidsordning. Ett besök som blivit mer än 1,5 timme försenat stryks.
+
+### Detaljvy för husen
+- Klicka på ett hus (även bastun, vedboden och dasset) för att få en panel med beskrivning, planskiss, mått och läget just nu. Kameran flyger dit och kretsar runt huset. Spelet pausas så länge panelen är öppen.
+- Texterna står i `js/world.js` (`info` på varje hus) och kan redigeras där.
+
 ### Resurser och strategi
 - **Funktionärer:** Olle, Stina och Kim. Från dag 3 kommer även Ali. Varje syssla kräver att någon går dit. Spelaren väljer vad som prioriteras.
 - **Stämning (0–100):** påverkas av sysslorna. Vid 0 förlorar du ett liv och stämningen återställs till 40.
@@ -85,7 +96,7 @@ Nya syntljud via WebAudio: tutor, krasch, pump, prutt, yxhugg, motor, startförs
 
 ## Teknik
 - ES-moduler med en import map: `three` pekar på `vendor/three/three.module.js` (r187, incheckad). Ingen CDN och inget byggsteg.
-- Lokalt: `npm start` (startar `server.mjs`) och öppna http://localhost:8080. Från `file://` fungerar det inte, eftersom webbläsare blockerar moduler där.
+- Lokalt: `npm start` (startar `server.mjs`) och öppna http://localhost:21046 (annan port: `PORT=1234 npm start`). Från `file://` fungerar det inte, eftersom webbläsare blockerar moduler där.
 - Publicering: GitHub Pages från `master` / root på https://martin-green.github.io/portalen2/. Filen `.nojekyll` finns. I repots inställningar (Settings → Pages) ska källan vara "Deploy from a branch", `master`, `/ (root)`. Den gamla `gh-pages`-grenen är en autogenererad projektsida och används inte.
 - Referensbilder (satellitbilder, kartor, foton) ligger i `references/`, som är undantagen i `.gitignore`.
 - Uppdatera three.js: `npm install three@latest` och sedan `npm run vendor`.

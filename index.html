@@ -32,6 +32,16 @@
 	<div id="crew"></div>
 	<button id="btnPortal" class="big">Öppna portalen</button>
 	<div id="toasts"></div>
+	<section id="house" class="hidden" aria-labelledby="houseName">
+		<button id="houseClose" class="close" title="Stäng (Esc)" aria-label="Stäng">×</button>
+		<small id="houseType"></small>
+		<h2 id="houseName"></h2>
+		<div class="plan"><svg id="housePlan" viewBox="0 0 120 90" role="img" aria-label="Planskiss"></svg></div>
+		<p id="houseInfo"></p>
+		<dl id="houseFacts"></dl>
+		<div id="houseActions"></div>
+		<p class="hint">Spelet står still medan du tittar. Dra för att vrida, klicka på ett annat hus för att byta.</p>
+	</section>
 </div>
 
 <div id="screen-start" class="screen">
@@ -77,7 +87,8 @@
 			<div>
 				<h3>Kontroller</h3>
 				<ul>
-					<li><b>Klicka</b> på portalen, flaggstången, dasset, vedboden, bastun, brunnen eller klipparen.</li>
+					<li><b>Klicka</b> på portalen, flaggstången, brunnen, huggkubben eller klipparen.</li>
+					<li><b>Klicka på ett hus</b> för att se information om det. Spelet pausas så länge.</li>
 					<li><b>Mellanslag</b> eller <b>↑/↓</b> – portalen</li>
 					<li><b>1–6</b> – flagga, dass, ved, bastu, klipp, ring sugbil</li>
 					<li><b>Dra</b> – flytta kartan · <b>högerdrag</b> – rotera/luta</li>

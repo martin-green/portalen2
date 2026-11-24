@@ -198,7 +198,7 @@ const cam = (Gfx.cam = {
 		const g = this.goal;
 		g.dist = PG.clamp(g.dist, 18, 280);
 		g.pitch = PG.clamp(g.pitch, 0.38, 1.4);
-		g.tx = PG.clamp(g.tx, 40, 260);
+		g.tx = PG.clamp(g.tx, 0, 260);
 		g.tz = PG.clamp(g.tz, 0, 190);
 	},
 	update(dt) {
@@ -372,10 +372,7 @@ function makeGround() {
 }
 
 // ---------- Water ----------
-Gfx.lakeFar = [[900, -300], [330, -300], [300, 38]].concat(W.lake.slice(1, 14), [[232, 600], [900, 600]]);
 function makeWater() {
-	const shape = new THREE.Shape(Gfx.lakeFar.map((p) => new THREE.Vector2(p[0], -p[1])));
-	const geo = new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2);
 	waterMat = new THREE.ShaderMaterial({
 		fog: true,
 		uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
@@ -406,9 +403,21 @@ function makeWater() {
 				#include <fog_fragment>
 			}`,
 	});
-	const water = new THREE.Mesh(geo, waterMat);
-	water.position.y = 0.04;
-	scene.add(water);
+	// Stora Härsjön and Boktjärn share the water material.
+	const shoreMat = new THREE.MeshLambertMaterial({ color: Gfx.color([150, 138, 100]) });
+	for (const poly of W.waters) {
+		const shape = new THREE.Shape(poly.map((p) => new THREE.Vector2(p[0], -p[1])));
+		const water = new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2), waterMat);
+		water.position.y = 0.04;
+		scene.add(water);
+		if (poly === W.lakeFar) continue;
+		// Sandy rim under the tarn (the camp ground texture only covers the map and draws its own shore).
+		const rim = new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2), shoreMat);
+		rim.scale.set(1.025, 1, 1.02);
+		rim.position.set(-poly.reduce((a, p) => a + p[0], 0) / poly.length * 0.025, -0.03, -poly.reduce((a, p) => a + p[1], 0) / poly.length * 0.02);
+		rim.receiveShadow = true;
+		scene.add(rim);
+	}
 }
 
 // ---------- Trees ----------
@@ -489,7 +498,7 @@ function makeTrees() {
 	for (let z = -200; z < 420; z += 8) {
 		for (let x = -220; x < 520; x += 8) {
 			const fx = x + (r() - 0.5) * 6, fz = z + (r() - 0.5) * 6;
-			if (inner(fx, fz) || PG.pointInPoly(fx, fz, Gfx.lakeFar)) continue;
+			if (inner(fx, fz) || W.inWater(fx, fz) || W.waterDist(fx, fz) < 3) continue;
 			if (Math.abs(fx - 162) < 6 && fz > 190) continue;
 			farList.push([fx, fz, 0.8 + r() * 0.5]);
 		}

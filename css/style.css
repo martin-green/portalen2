@@ -100,6 +100,27 @@ button.big:hover:not(:disabled) { background: #ffd93a; }
 .toast.out { opacity: 0; transform: translateY(-8px); }
 @keyframes tin { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
 
+/* ---------- House detail view ---------- */
+#house { position: absolute; top: 78px; left: 10px; width: 340px; max-height: calc(100% - 100px); overflow-y: auto; padding: 14px 16px 12px; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); animation: tin 0.25s ease-out; }
+#house small { color: var(--accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+#house h2 { margin: 2px 0 8px; font-size: 1.45rem; }
+#house .close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; padding: 0; font-size: 1.3rem; line-height: 1; }
+#house .plan { background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 6px; }
+#house .plan svg { display: block; width: 100%; height: 110px; }
+#house .plan .wall { fill: #8e2b1f; stroke: #ebe6da; stroke-width: 0.8; }
+#house .plan .ridge { stroke: rgba(255, 255, 255, 0.55); stroke-width: 0.6; stroke-dasharray: 2 1.5; }
+#house .plan .north { fill: none; stroke: var(--muted); stroke-width: 1; }
+#house .plan text { fill: var(--muted); font-size: 7px; font-family: inherit; }
+#house p { font-size: 0.88rem; line-height: 1.45; color: #dcd8cc; margin: 10px 0; }
+#house dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 8px 0; font-size: 0.82rem; }
+#house dt { color: var(--muted); }
+#house dd { margin: 0; font-variant-numeric: tabular-nums; }
+#houseActions { display: flex; gap: 8px; flex-wrap: wrap; }
+#houseActions:empty { display: none; }
+#houseActions button { background: var(--accent); color: #1c1a10; border: none; font-weight: 700; }
+#house .hint { font-size: 0.72rem; color: var(--muted); margin: 10px 0 0; }
+body.house-open #toasts { left: 360px; width: min(420px, calc(100% - 700px)); }
+
 /* ---------- World markers ---------- */
 #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .marker { position: absolute; left: 0; top: 0; will-change: transform; }
@@ -172,5 +193,8 @@ body.ready #loading { display: none; }
 	#toasts { width: calc(100% - 12px); left: 6px; top: 58px; }
 	#btnPortal { bottom: 8px; min-width: 200px; padding: 10px 16px; }
 	.panel .cols { grid-template-columns: 1fr; }
+	#house { top: auto; bottom: 6px; left: 6px; right: 6px; width: auto; max-height: 58%; }
+	#house .plan svg { height: 80px; }
+	body.house-open #tasks, body.house-open #btnPortal, body.house-open #toasts { display: none; }
 	.panel h1 { font-size: 2.2rem; }
 }

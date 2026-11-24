@@ -5,9 +5,14 @@
 		sun: [0, 0.5, 0.8], alt: 0.8, day: 1, golden: 0, windows: 0,
 		sunColor: [1, 1, 1], sunIntensity: 2.5, hemiSky: [0.6, 0.7, 0.9], hemiGround: [0.3, 0.3, 0.2], hemiIntensity: 1,
 		skyTop: [0.3, 0.5, 0.85], skyHorizon: [0.75, 0.85, 0.95], lightDir: [0, 0.5, 0.8],
-		setTime(hours) {
+		setTime(totalHours) {
+			// Game time keeps counting past 24 (day 2 starts at 24), so work with the hour of the day.
+			const hours = ((totalHours % 24) + 24) % 24;
 			const az = ((hours - 13) / 12) * Math.PI;
-			const altDeg = 52 * Math.sin((Math.PI * (hours - 4)) / 18);
+			// Up from 04 to 22 (peak 52° at 13), then a shallow dip under the horizon through the night.
+			const altDeg = hours >= 4 && hours <= 22
+				? 52 * Math.sin((Math.PI * (hours - 4)) / 18)
+				: -18 * Math.sin((Math.PI * (((hours - 22) + 24) % 24)) / 6);
 			const alt = (altDeg * Math.PI) / 180;
 			const ca = Math.cos(alt);
 			this.sun = [-Math.sin(az) * ca, Math.cos(az) * ca, Math.sin(alt)];
