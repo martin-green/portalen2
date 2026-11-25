@@ -785,7 +785,7 @@ function pickSegment() {
 
 MW.update = function (dt, G) {
 	MW.attemptT -= dt;
-	const loud = Gfx.visible(MW.x, MW.z, 100) ? 0.25 : 0.06;
+	const loud = Gfx.visible(MW.x, MW.z, 100) ? 0.1 : 0.025;
 	A.loop('mower', MW.running() ? loud : 0);
 	if (MW.state === 'waitStart' || MW.state === 'stalled') {
 		MW.autoT += dt;

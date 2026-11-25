@@ -255,6 +255,14 @@
 		const sz = GC * PPM, px = i * sz, pz = j * sz;
 		const L = len[k];
 		const c = grassColor(L, seed[k], stripe[k]);
+		if (applyMask) {
+			// Single-cell update: clip to the cell, otherwise 'destination-in' below
+			// wipes the whole canvas outside the drawn rect (unbounded compositing).
+			g.save();
+			g.beginPath();
+			g.rect(px, pz, sz, sz);
+			g.clip();
+		}
 		g.fillStyle = PG.rgbStr(c[0], c[1], c[2]);
 		g.fillRect(px - 1, pz - 1, sz + 2, sz + 2);
 		if (L > 0.5) {
@@ -268,8 +276,9 @@
 		}
 		if (applyMask) {
 			g.globalCompositeOperation = 'destination-in';
-			g.drawImage(maskCv, px - 1, pz - 1, sz + 2, sz + 2, px - 1, pz - 1, sz + 2, sz + 2);
+			g.drawImage(maskCv, px, pz, sz, sz, px, pz, sz, sz);
 			g.globalCompositeOperation = 'source-over';
+			g.restore();
 		}
 	}
 
